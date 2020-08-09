@@ -1,0 +1,53 @@
+// __multiversion__
+// This signals the loading code to prepend either #version 100 or #version 300 es as apropriate.
+
+#include "shaders/fragmentVersionCentroid.h"
+
+#if __VERSION__ >= 300
+
+#if defined(TEXEL_AA) && defined(TEXEL_AA_FEATURE)
+_centroid in highp vec2 uv;
+#else
+_centroid in vec2 uv;
+#endif
+
+#else
+
+varying vec2 uv;
+
+#endif
+
+#include "shaders/uniformShaderConstants.h"
+#include "shaders/util.h"
+#include "shaders/uniformPerFrameConstants.h"
+#include "shaders/uniformShaderConstants.h"
+
+uniform sampler2D TEXTURE_0;
+
+varying vec3 ss_w_pos;
+
+void main()
+{
+#if !defined(TEXEL_AA) || !defined(TEXEL_AA_FEATURE)
+	vec4 diffuse = texture2D( TEXTURE_0, uv );
+#else
+	vec4 diffuse = texture2D_AA(TEXTURE_0, uv );
+#endif
+
+vec4 ss_f_color =FOG_COLOR;
+vec4 l_ss_f_color =max(ss_f_color,vec4(1.0));
+
+float ss_night_color =pow(max(min(1.0-(ss_f_color.b)*1.5,1.0),0.0),0.3);
+float ss_dusk_color =pow(max(min(1.0-ss_f_color.b*1.2,1.0),0.0),0.5)-ss_night_color;
+float rain =pow(FOG_CONTROL.y,5.0);
+
+vec3 ss_t_pos =ss_w_pos;
+
+float test1 =1.0-pow(length(ss_w_pos*50.0),ss_night_color*0.0+0.6);
+float test =1.0-pow(length(ss_w_pos*2.0),0.5*max(pow(ss_f_color.g+0.1,12.0),0.2));
+
+vec4 ss_sun_color=mix(vec4(0.500,0.3,0.02,0.600),vec4(1.0,1.0,1.0,2.0),ss_night_color);
+
+    vec4 sun = vec4(ss_sun_color.rgb,min(max(test*rain,0.0),1.0));
+	gl_FragColor = mix(sun,ss_sun_color,max(min((test1)*rain,1.0),0.0));
+}
